@@ -10,7 +10,7 @@ if __name__ == "__main__":
         template = template_file.read()
     
     if input("About to delete the 'days' directory and rebuild clean. Continue? (y/n)")[0].lower() == 'y':
-        days_directory = Path(__file__).parent / "days"
+        days_directory = Path(__file__).parent / "src" / "days"
         if days_directory.exists():
             rmtree(days_directory)
         days_directory.mkdir()
