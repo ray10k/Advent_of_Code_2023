@@ -30,3 +30,6 @@ def solve_day() -> tuple[float,float,float]:
     time_total = (end_time - start_time) / 1_000_000
     print(f"=== Day 20 ===\n  · Part 1: {result_one}\n  · Part 2: {result_two}\n  · Time: {time_one}; {time_two}; {time_total}")
     return time_one, time_two, time_total
+
+if __name__ == "__main__":
+    solve_day()
