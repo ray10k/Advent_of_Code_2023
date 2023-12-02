@@ -22,7 +22,6 @@ def solution_one(parsed_input:tuple) -> str:
     for line in parsed_input:
         digits = [int(x) for x in line if x.isdigit()]
         numbers.append((digits[0]*10)+digits[-1])
-        #print(f"{line} = {digits}")
     return str(sum(numbers))
 
 def solution_two(parsed_input:tuple) -> str:
@@ -32,7 +31,6 @@ def solution_two(parsed_input:tuple) -> str:
     reverse_pattern = re.compile(r'([1-9])|eno|owt|eerht|ruof|evif|xis|neves|thgie|enin')
     for line in parsed_input:
         first,last = number_pattern.search(line).group(),reverse_pattern.search(line[::-1]).group()
-        print(first,last)
         numbers.append((word_values[first]*10)+word_values[last[::-1]])
     return str(sum(numbers))
 
