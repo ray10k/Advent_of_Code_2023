@@ -5,19 +5,30 @@ INPUT_NAME = "day25.txt"
 INPUT_PATH = Path(__file__).parent.parent.parent / "input" / INPUT_NAME
 
 def parse_line(line:str):
+    """ Parse one line of the input into an 'object' for the solution.
+    If a line should be discarded, return None instead. """
+    line = line.strip()
+    if line == "":
+        return None
     return line
 
 def parse_input(file_path = INPUT_PATH):
-    parsed_input = list()
+    """ Loads the given file, and parses it line-by-line. Should return
+    some useful representation of the input. """
+    parsed_input = None
     if file_path.exists():
         with open(file_path) as input_file:
             parsed_input = tuple(parse_line(line) for line in input_file)
-    return tuple(parsed_input)
+    return tuple(x for x in parsed_input if x is not None)
 
 def solution_one(parsed_input:tuple) -> str:
+    """ Takes the (parsed) input of the puzzle and uses it to solve for
+    the first star of the day. """
     return ""
 
 def solution_two(parsed_input:tuple) -> str:
+    """ Takes the (parsed) input of the puzzle and uses it to solve for
+    the second star of the day. """
     return ""
 
 def solve_day() -> tuple[float,float,float]:
