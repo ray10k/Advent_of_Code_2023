@@ -8,6 +8,17 @@ NWLN = '\n'
 
 PROCESSING_STEPS = [step for step in "seed soil fertilizer water light temperature humidity location".split(" ")]
 
+def flatten_list(lists:list[list]) -> list:
+    return [item for sublist in lists for item in sublist]
+
+class MappedRange(NamedTuple):
+    r_start:int
+    r_end:int
+
+    @classmethod
+    def from_range(cls,rng:range) -> "MappedRange":
+        return MappedRange(rng.start,rng.stop-1)
+
 class Mapping(NamedTuple):
     dest_start:int
     source_start:int
@@ -21,14 +32,35 @@ class Mapping(NamedTuple):
         delta = self.dest_start - self.source_start
         return value + delta
     
-    def map_range(self,range_s:int,range_l:int) -> list[tuple[int,int]]:
+    def map_range(self,rng:MappedRange) -> tuple[MappedRange|None,list[MappedRange]]:
+        """ Returns the mapped part of the given range, plus a list of un-mapped ranges."""
         # 5 possible situations: entire range is in mapping range,
         # range starts outside mapping range and ends inside,
         # range starts inside mapping range and ends outside,
         # range starts before mapping range and ends after,
         # range has no overlap with mapping range.
+        source_end = self.source_start + self.range_length - 1
+
+        if rng.r_end < self.source_start or rng.r_start > source_end:
+            #no overlap, no change.
+            return None,[rng]
+
+        if rng.r_start < self.source_start and rng.r_end > source_end:
+            #Given range fully overlaps mapped range.
+            middle = MappedRange(self.dest_start,self.map_number(source_end))
+            return middle,[MappedRange(rng.r_start,self.source_start-1),MappedRange(source_end+1,rng.r_end)]
         
-        pass
+        if rng.r_start >= self.source_start and rng.r_end <= source_end:
+            #Given range is fully contained in mapped range.
+            return MappedRange(self.map_number(rng.r_start),self.map_number(rng.r_end)),[]
+        
+        if rng.r_start >= self.source_start:
+            #Left side of the range overlaps the mapped range.
+            return MappedRange(self.map_number(rng.r_start),self.map_number(source_end)),[MappedRange(source_end+1,rng.r_end)]
+        else:
+            #Right side of the range overlaps the mapped range.
+            return MappedRange(self.dest_start,self.map_number(rng.r_end)),[MappedRange(rng.r_start,self.source_start-1)]
+
     
     def __repr__(self) -> str:
         return f"dstart: {self.dest_start} sstart: {self.source_start} length: {self.range_length}"
@@ -50,6 +82,20 @@ class MapSet(NamedTuple):
             return mapping.map_number(value)
         return value
     
+    def map_range(self,rng:MappedRange) -> list[MappedRange]:
+        to_map = [rng]
+        mappedval = list()
+        for mapping in self.mappings:
+            for r in to_map:
+                to_map.remove(r)
+                mapped, unmapped = mapping.map_range(r)
+                to_map.extend(unmapped)
+                if mapped is not None:
+                    mappedval.append(mapped)
+        retval = list(to_map)
+        retval.extend(mappedval)
+        return retval
+    
     def __repr__(self) -> str:
         return f"\nMap to {self.dest_type}:\n{NWLN.join(repr(mapping) for mapping in self.mappings)}"
 
@@ -68,6 +114,13 @@ class Almanac(NamedTuple):
             value = mapping.map_verbose(value)
         print(f"Location: {value}")
         return value
+    
+    def map_range(self, rng:MappedRange) -> list[MappedRange]:
+        retval = [rng]
+        for mapping in self.mappings:
+            temp = [mapping.map_range(r) for r in retval]
+            retval = flatten_list(temp)
+        return retval
     
     def __repr__(self) -> str:
         return f"seeds: {' '.join(str(seed) for seed in self.seeds)}\n{NWLN.join(repr(mapping) for mapping in self.mappings)}"
@@ -109,12 +162,19 @@ def solution_one(parsed_input:Almanac) -> str:
 def solution_two(parsed_input:Almanac) -> str:
     """ Takes the (parsed) input of the puzzle and uses it to solve for
     the second star of the day. """
-    total = 0
-    for length in parsed_input.seeds[1::2]:
-        total += length
-    print(total)
+    starting_ranges = [
+        MappedRange(start,start+end-1)
+        for start,end
+        in zip(parsed_input.seeds[::2],parsed_input.seeds[1::2])
+    ]
+    final_ranges = [
+        parsed_input.map_range(r)
+        for r
+        in starting_ranges
+    ]
     
-    return ""
+    
+    return str(min(flatten_list(final_ranges),key=lambda r:r.r_start).r_start)
 
 def solve_day() -> tuple[float,float,float]:
     times = [0,0,0,0]
