@@ -61,9 +61,7 @@ pub fn solve() -> SolutionPair {
         }
         retval
     };
-    println!("{times:?}");
-    println!("{distances:?}");
-    println!("Re-kerned: {full_time}; {full_dist}");
+    
     let races:Vec<RaceStats> = zip(times,distances)
         .map(|pair| RaceStats{time:pair.0,distance:pair.1})
         .collect();
@@ -71,11 +69,6 @@ pub fn solve() -> SolutionPair {
         time:i64::from_str_radix(&full_time[0..], 10).unwrap(),
         distance:i64::from_str_radix(&full_dist[0..], 10).unwrap()
     };
-
-    for race in races.iter(){
-        let winners = race.record_times();
-        println!("{};{} => [{};{}]({})",race.time,race.distance,winners.0,winners.1,(max(winners.0,winners.1) - min(winners.0,winners.1)));
-    }
 
     let sol1: u64 = races.iter()
         .map(|r| r.record_times())
