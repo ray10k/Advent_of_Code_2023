@@ -1,8 +1,21 @@
 from pathlib import Path
 from time import perf_counter_ns
+from typing import NamedTuple
+from itertools import cycle
+import re
 
 INPUT_NAME = "day08.txt"
 INPUT_PATH = Path(__file__).parent.parent.parent / "input" / INPUT_NAME
+LINE_PATT = re.compile(r"(\w{3}) = \((\w{3}), (\w{3})\)")
+
+class PathStep(NamedTuple):
+    name:str
+    left:str
+    right:str
+
+class TravelMap(NamedTuple):
+    instructions:str
+    steps:dict[str,PathStep]
 
 def parse_line(line:str):
     """ Parse one line of the input into an 'object' for the solution.
@@ -10,26 +23,62 @@ def parse_line(line:str):
     line = line.strip()
     if line == "":
         return None
-    return line
+    names = LINE_PATT.match(line).groups()
+    return PathStep(*names)
 
 def parse_input(file_path = INPUT_PATH):
     """ Loads the given file, and parses it line-by-line. Should return
     some useful representation of the input. """
-    parsed_input = None
     if file_path.exists():
         with open(file_path) as input_file:
-            parsed_input = tuple(parse_line(line) for line in input_file)
-    return tuple(x for x in parsed_input if x is not None)
+            instructions = next(input_file).strip()
+            parsed_steps = {step.name:step for step in filter(lambda x: x is not None, (parse_line(line) for line in input_file))}
+            return TravelMap(instructions,parsed_steps)
 
-def solution_one(parsed_input:tuple) -> str:
+def solution_one(parsed_input:TravelMap) -> str:
     """ Takes the (parsed) input of the puzzle and uses it to solve for
     the first star of the day. """
-    return ""
+    current = parsed_input.steps["AAA"]
+    stepcount = 0
+    instruction = cycle(parsed_input.instructions)
+    while current.name != "ZZZ":
+        stepcount += 1
+        step = next(instruction)
+        current = parsed_input.steps[current.left if step == "L" else current.right]
 
-def solution_two(parsed_input:tuple) -> str:
+    return str(stepcount)
+
+def solution_two(parsed_input:TravelMap) -> str:
     """ Takes the (parsed) input of the puzzle and uses it to solve for
     the second star of the day. """
-    return ""
+    current = {step.name for step in parsed_input.steps.values() if step.name[2] == "A"}
+    stepcount = 0
+    instruction = cycle(parsed_input.instructions)
+    done = lambda s: all(step[2] == "Z" for step in s)
+
+    # Tried doing the solution one *thing* in parallel, left it running for over half an hour
+    # without getting a solve. Time to get creative.
+
+    # There is a limited number of starting points, and a limited number of end points. Find both.
+    starting_points = set(step.name for step in parsed_input.steps.values() if step.name[2] == "A")
+    ending_points = set(step.name for step in parsed_input.steps.values() if step.name[2] == "Z")
+
+    # From each starting point, there will eventually be a stable loop that includes at least one ending point.
+    # That stable loop can be defined as "some number of iterations of the instruction set (setup) followed by 
+    # another number of iterations of the instruction set (loop)"
+
+    while not done(current):
+        stepcount += 1
+        current_instruction = next(instruction)
+        next_step = set()
+        for step in current:
+            destination = parsed_input.steps[step]
+            next_step.add(destination.left if current_instruction == "L" else destination.right)
+        current = next_step
+        dones = len(list(filter(lambda x: x[2]=="Z",current)))
+        print(f"\r{len(current):< 4}{dones:< 4}{current_instruction}",end="",flush=True)
+    print()
+    return str(stepcount)
 
 def solve_day() -> tuple[float,float,float]:
     times = [0,0,0,0]
