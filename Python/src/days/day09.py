@@ -10,7 +10,7 @@ def parse_line(line:str):
     line = line.strip()
     if line == "":
         return None
-    return line
+    return tuple(int(num) for num in line.split(" "))
 
 def parse_input(file_path = INPUT_PATH):
     """ Loads the given file, and parses it line-by-line. Should return
@@ -21,15 +21,29 @@ def parse_input(file_path = INPUT_PATH):
             parsed_input = tuple(parse_line(line) for line in input_file)
     return tuple(x for x in parsed_input if x is not None)
 
-def solution_one(parsed_input:tuple) -> str:
+def delta_up_down(initial:tuple[int,...]) -> tuple[int,int]:
+    current = [b - a for a,b in zip(initial[0:],initial[1:])]
+    pyramid = [list(initial),current]
+    while not all(x == 0 for x in current):
+        current = [b - a for a,b in zip(current[0:],current[1:])]
+        pyramid.append(current)
+    left, right = 0, 0
+    for line in pyramid[-2::-1]:
+        left = line[0] - left
+        right = right + line[-1]
+    return left,right
+
+def solution_one(parsed_input:tuple[tuple[int,...],...]) -> str:
     """ Takes the (parsed) input of the puzzle and uses it to solve for
     the first star of the day. """
-    return ""
+    result = sum(delta_up_down(x)[1] for x in parsed_input)
+    return str(result)
 
-def solution_two(parsed_input:tuple) -> str:
+def solution_two(parsed_input:tuple[tuple[int,...],...]) -> str:
     """ Takes the (parsed) input of the puzzle and uses it to solve for
     the second star of the day. """
-    return ""
+    result = sum(delta_up_down(x)[0] for x in parsed_input)
+    return str(result)
 
 def solve_day() -> tuple[float,float,float]:
     times = [0,0,0,0]
