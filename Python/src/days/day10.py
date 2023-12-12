@@ -43,6 +43,31 @@ def connections(char:str,position:Coordinate) -> None|tuple[Coordinate,Coordinat
         case '7': return position.with_offset(-1,0),position.with_offset(0,1)
         case 'F': return position.with_offset(1,0),position.with_offset(0,1)
         case _: return None
+        
+def direction(previous:Coordinate,current:Coordinate,pipe:str) -> int:
+    # Positive is a clockwise turn, negative is a counter-clockwise turn.
+    if pipe == '|' or pipe == '-': #Going straight, no turning.
+        return 0
+    delta_h = current.h - previous.h
+    delta_v = current.v - previous.v
+    match delta_h,delta_v:
+        case 1,0:  return 1 if pipe == 'F' else -1 #Coming from south
+        case -1,0: return 1 if pipe == 'J' else -1 #Coming from north
+        case 0,1:  return 1 if pipe == '7' else -1 #Coming from west
+        case _:    return 1 if pipe == 'L' else -1 #Coming from east
+    
+def side(previous:Coordinate,current:Coordinate,clockwise:bool) -> Coordinate:
+    # Clockwise is on the 'right' of current, counterclockwise on the 'left'
+    if previous.h == current.h: #moving up/down
+        if previous.v > current.v: #moving down
+            return current.with_offset(-1 if clockwise else 1,0)
+        else: #moving up
+            return current.with_offset(1 if clockwise else 0,0)
+    else: #moving left/right
+        if previous.h > current.h: #moving left
+            return current.with_offset(0,-1 if clockwise else 1)
+        else: #moving right
+            return current.with_offset(0,1 if clockwise else -1)
 
 def solution_one(parsed_input:tuple[str,...]) -> str:
     """ Takes the (parsed) input of the puzzle and uses it to solve for
@@ -64,7 +89,6 @@ def solution_one(parsed_input:tuple[str,...]) -> str:
         conn = connections(pipe,to_check)
         if conn is not None and start in conn:
             connected_to_start.append(to_check)
-    print(f"Found {len(connected_to_start)} pipes that connect to the starting point.")
     stepcount = 0
     for sub_start in connected_to_start:
         visited = set()
@@ -84,26 +108,54 @@ def solution_one(parsed_input:tuple[str,...]) -> str:
 def solution_two(parsed_input:tuple) -> str:
     """ Takes the (parsed) input of the puzzle and uses it to solve for
     the second star of the day. """
-    # Step 1: find out which way the area 'turns.' Trace the entire path,
-    # counting turns right and subtracting turns left; if the result is
-    # positive, the area turns 'clockwise' and the inside is on the right
-    # of the path. Also, collect all the locations along the path for future
-    # steps.
-    start_location = None
+    # Step 1: Find the beginning and end of the loop.
+    start_location:Coordinate = None
     for y,line in enumerate(parsed_input):
         for x,char in enumerate(line):
             if char == 'S':
                 start_location = Coordinate(x,y)
                 break
-    first_pipe = None
+    first_pipe,last_pipe = None,None
     for spot in start_location.all_adjacent():
         pipe = parsed_input[spot.v][spot.h]
         if start_location in connections(pipe,spot):
-            first_pipe = spot
+            if first_pipe is None:
+                first_pipe = spot
+                continue
+            last_pipe = spot
             break
-
-
-    return ""
+    print(f"Pipes connected are {first_pipe} and {last_pipe}")
+    # Step 2: find out which way the area 'turns.' Trace the entire path,
+    # counting turns right and subtracting turns left; if the result is
+    # positive, the area turns 'clockwise' and the inside is on the right
+    # of the path. Also, collect all the locations along the path for future
+    # steps.
+    turns = 0
+    pipe_locations:list[Coordinate] = list()
+    pipe_locations.append(start_location)
+    previous = start_location
+    current = first_pipe
+    while current != start_location:
+        pipe_locations.append(current)
+        pipe = parsed_input[current.v][current.h]
+        neighbors = connections(pipe,current)
+        next_ = neighbors[0] if neighbors[1] == previous else neighbors[1]
+        turns += direction(previous,current,pipe)
+        previous = current
+        current = next_
+    print(f"Found {len(pipe_locations)} pieces of pipe. Total turn number: {turns}; {'clockwise' if turns > 0 else 'counterclockwise'}")
+    clockwise = len(pipe_locations) > 0
+    inside_tiles:set[Coordinate] = set()
+    for prev,current in zip(pipe_locations[:],pipe_locations[1:]):
+        print(".",end="",flush=True)
+        to_fill = [side(prev,current,clockwise)]
+        while len(to_fill) > 0:
+            current_fill = to_fill.pop()
+            if current_fill not in inside_tiles and current_fill not in pipe_locations:
+                to_fill.extend(current_fill.all_adjacent())
+                inside_tiles.add(current_fill)
+    
+    return str(len(inside_tiles))
 
 def solve_day() -> tuple[float,float,float]:
     times = [0,0,0,0]
