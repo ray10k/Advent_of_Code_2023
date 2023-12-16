@@ -234,7 +234,6 @@ def solution_one(parsed_input:tuple[str,...],gui:GridGui=None) -> str:
             if char == 'S':
                 start = Coordinate(x,y)
             w = max(w,len(line)) 
-    print(f"Starting from {start};board size {w}x{h}")
     # Check in which directions the starting point can go- should be between 2 and 4 options
     around = [start.with_offset(1,0),start.with_offset(-1,0),start.with_offset(0,1),start.with_offset(0,-1)]
     connected_to_start:list[Coordinate] = []
@@ -297,7 +296,6 @@ def solution_two(parsed_input:tuple[str,...],gui:GridGui=None) -> str:
         turns += direction(previous,current,pipe)
         previous = current
         current = next_
-    print(f"Found {len(pipe_locations)} pieces of pipe. Total turn number: {turns}; {'clockwise' if turns > 0 else 'counterclockwise'}")
     clockwise = turns > 0
     inside_tiles:set[Coordinate] = set()
 
@@ -344,15 +342,5 @@ def solve_day() -> tuple[float,float,float]:
     return time_one, time_two, time_total
 
 if __name__ == "__main__":
-    test_coord = Coordinate(5,5)
-    print(side(test_coord,test_coord.with_offset(-1,0),True),"left")
-    print(side(test_coord,test_coord.with_offset(1,0),True),"right")
-    print(side(test_coord,test_coord.with_offset(0,-1),True),"up")
-    print(side(test_coord,test_coord.with_offset(0,1),True),"down")
-
-    print(direction(test_coord.with_offset(-1,0),test_coord,"J"),direction(test_coord.with_offset(0,-1),test_coord,"J"),"NW")
-    print(direction(test_coord.with_offset(-1,0),test_coord,"7"),direction(test_coord.with_offset(0,1),test_coord,"7"),"SW")
-    print(direction(test_coord.with_offset(1,0),test_coord,"F"),direction(test_coord.with_offset(0,1),test_coord,"F"),"SE")
-    print(direction(test_coord.with_offset(1,0),test_coord,"L"),direction(test_coord.with_offset(0,-1),test_coord,"L"),"NE")
 
     solve_day()
