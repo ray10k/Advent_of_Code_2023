@@ -165,43 +165,48 @@ def direction(previous:Coordinate,current:Coordinate,pipe:str) -> int:
             return -1 if pipe == 'F' else 1
 
 def adjacencies(previous:Coordinate,current:Coordinate,pipe:str) -> tuple[list[Coordinate],list[Coordinate]]:
+    # first list is going clockwise, second list is going counter clockwise
     delta_h = current.h - previous.h
     
+    north = current.with_offset(0,-1)
     ne = current.with_offset(1,-1)
+    east = current.with_offset(1,0)
     se = current.with_offset(1,1)
+    south = current.with_offset(0,1)
     sw = current.with_offset(-1,1)
+    west = current.with_offset(-1,0)
     nw = current.with_offset(-1,-1)
 
-    if pipe == '7':
+    if pipe == '7': #covers south and west
         if delta_h == 0:
-            return ([nw,current.with_offset(0,-1),ne,current.with_offset(1,0),se],[sw])
+            return ([sw],[nw,north,ne,east,se])
         else:
-            return ([sw],[nw,current.with_offset(0,-1),ne,current.with_offset(1,0),se])
-    if pipe == 'J':
-        if delta_h == 0:
-            return ([nw],[ne,current.with_offset(1,0),se,current.with_offset(0,1),sw])
+            return ([nw,north,ne,east,se],[sw])
+    if pipe == 'J': #covers north and west
+        if delta_h == 0: 
+            return ([ne,east,se,south,sw],[nw])
         else:
-            return ([ne,current.with_offset(1,0),se,current.with_offset(0,1),sw],[nw])
-    if pipe == 'L':
-        if delta_h == 0:
-            return ([nw,current.with_offset(-1,0),sw,current.with_offset(0,1),se],[ne])
+            return ([nw],[ne,east,se,south,sw])
+    if pipe == 'L': #covers north and east
+        if delta_h == 0: #east is left
+            return ([ne],[se,south,sw,west,nw])
         else:
-            return ([ne],[nw,current.with_offset(-1,0),sw,current.with_offset(0,1),se])
+            return ([se,south,sw,west,nw],[ne])
     if pipe == 'F':
         if delta_h == 0:
-            return ([se],[sw,current.with_offset(-1,0),nw,current.with_offset(0,-1),ne])
+            return ([sw,south,nw,north,ne],[se])
         else:
-            return ([sw,current.with_offset(-1,0),nw,current.with_offset(0,-1),ne],[se])
+            return ([se],[sw,south,nw,north,ne])
     if pipe == '-':
         if delta_h > 0:
-            return ([nw,current.with_offset(0,-1),ne],[se,current.with_offset(0,1),sw])
+            return ([nw,north,ne],[se,south,sw])
         else:
-            return ([se,current.with_offset(0,1),sw],[nw,current.with_offset(0,-1),ne])
+            return ([se,south,sw],[nw,north,ne])
     delta_v = current.v - previous.v
     if delta_v > 0:
-        return ([ne,current.with_offset(1,0),se],[nw,current.with_offset(-1,0),sw])
+        return ([ne,east,se],[nw,west,sw])
     else:
-        return ([nw,current.with_offset(-1,0),sw],[ne,current.with_offset(1,0),se])
+        return ([nw,west,sw],[ne,east,se])
 
 def side(previous:Coordinate,current:Coordinate,clockwise:bool) -> Coordinate:
     if previous == current:
@@ -298,7 +303,7 @@ def solution_two(parsed_input:tuple[str,...],gui:GridGui=None) -> str:
 
     for prev,current in zip(pipe_locations[:],pipe_locations[1:]):
         pipe = parsed_input[current.v][current.h]
-        to_fill = adjacencies(prev,current,pipe)[0 if clockwise else 1]
+        to_fill = adjacencies(prev,current,pipe)[1 if clockwise else 0]
         if gui is not None:
             gui.move_cursor(current.h,current.v)
             gui.move_target(to_fill[0].h,to_fill[0].v)
