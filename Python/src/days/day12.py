@@ -1,8 +1,49 @@
 from pathlib import Path
 from time import perf_counter_ns
+from typing import NamedTuple
+from functools import cache
 
-INPUT_NAME = "day12.txt"
+INPUT_NAME = "day12_1.txt"
 INPUT_PATH = Path(__file__).parent.parent.parent / "input" / INPUT_NAME
+
+class Record(NamedTuple):
+    line:str
+    groups:tuple[int,...]
+    
+    @classmethod
+    def parse_line(cls,line:str) -> "Record":
+        split_point = line.index(' ')
+        numbers = tuple(int(x) for x in line[split_point+1:].split(','))
+        return cls(line[0:split_point],numbers)
+    
+    def __repr__(self) -> str:
+        return f"{self.line} -> {' '.join(str(x) for x in self.groups)}"
+    
+    def arrangements(self) -> int:
+        #No point trying to cram a 6 position solution into a 5 position substring.
+        return _get_arrangements(self.line,self.groups,0,0)
+    
+@cache
+def _get_arrangements(line:str,groups:tuple[int,...],line_start:int,group_start:int) -> int:
+    if group_start + 1 >= len(groups): #All groups checked, solution is valid.
+        return 1
+    if line_start + 1 >= len(line): #Groups remaining but the line ran out, solution invalid.
+        return 0
+    if line[line_start] == '.': #Current character is not a valid starting point, but the next one may be.
+        return _get_arrangements(line,groups,line_start+1,group_start)
+    total = 0
+    if line[line_start] == '?':
+        total += _get_arrangements(line,groups,line_start+1,group_start)
+    group = groups[group_start]
+    if len(line) <= line_start + group: #The current group can't possibly fit in the remainder of the line.
+        return 0 
+    for i in range(group):
+        if line[line_start+i] == '.': #Longest possible group at this point in the line is too short.
+            return 0
+    if len(line) > line_start+group and line[line_start+group] == '#': #The current sequence is too long, solution invalid.
+        return 0
+    total += _get_arrangements(line,groups,line_start+group,group_start+1)
+    return total
 
 def parse_line(line:str):
     """ Parse one line of the input into an 'object' for the solution.
@@ -10,7 +51,7 @@ def parse_line(line:str):
     line = line.strip()
     if line == "":
         return None
-    return line
+    return Record.parse_line(line)
 
 def parse_input(file_path = INPUT_PATH):
     """ Loads the given file, and parses it line-by-line. Should return
@@ -21,9 +62,12 @@ def parse_input(file_path = INPUT_PATH):
             parsed_input = tuple(parse_line(line) for line in input_file)
     return tuple(x for x in parsed_input if x is not None)
 
-def solution_one(parsed_input:tuple) -> str:
+def solution_one(parsed_input:tuple[Record,...]) -> str:
     """ Takes the (parsed) input of the puzzle and uses it to solve for
     the first star of the day. """
+    for r in parsed_input:
+        print(repr(r),';',r.arrangements())
+        
     return ""
 
 def solution_two(parsed_input:tuple) -> str:
