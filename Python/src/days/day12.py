@@ -20,29 +20,51 @@ class Record(NamedTuple):
         return f"{self.line} -> {' '.join(str(x) for x in self.groups)}"
     
     def arrangements(self) -> int:
-        #No point trying to cram a 6 position solution into a 5 position substring.
         return _get_arrangements(self.line,self.groups,0,0)
     
 @cache
 def _get_arrangements(line:str,groups:tuple[int,...],line_start:int,group_start:int) -> int:
-    if group_start + 1 >= len(groups): #All groups checked, solution is valid.
-        return 1
-    if line_start + 1 >= len(line): #Groups remaining but the line ran out, solution invalid.
-        return 0
-    if line[line_start] == '.': #Current character is not a valid starting point, but the next one may be.
-        return _get_arrangements(line,groups,line_start+1,group_start)
     total = 0
-    if line[line_start] == '?':
-        total += _get_arrangements(line,groups,line_start+1,group_start)
-    group = groups[group_start]
-    if len(line) <= line_start + group: #The current group can't possibly fit in the remainder of the line.
-        return 0 
-    for i in range(group):
-        if line[line_start+i] == '.': #Longest possible group at this point in the line is too short.
-            return 0
-    if len(line) > line_start+group and line[line_start+group] == '#': #The current sequence is too long, solution invalid.
+    gl = len(groups)
+    ll = len(line)
+    rc = ll - line_start
+
+    #First off, pass-condition; The current group is *past* the last group, and there are no more
+    # #'s in the line.
+    if gl <= group_start:
+        for char in line[line_start:]:
+            if char == '#':
+                return 0
+        return 1
+    
+    cg = groups[group_start]
+    next_start = line_start + cg + 1
+    print(f"ls {line_start}; gs {group_start}; {line[line_start:]},{cg}")
+    
+    #Second: There are at least as many characters left in the line as the current group. Reject otherwise.
+    if rc < cg:
         return 0
-    total += _get_arrangements(line,groups,line_start+group,group_start+1)
+
+    #print(f" {line[line_start]}; {groups[group_start]}")
+    #Next: if the current character is definitely a ., move on and try with the next.
+    if line[line_start] == '.':
+        return _get_arrangements(line,groups,line_start+1,group_start)
+    #Current character is either a # or a ?.
+    #If the current character is a ?, try treating it as a .
+    if line[line_start] == '?' or (line_start+1 < ll and line[line_start+1] != '.'):
+        total += _get_arrangements(line,groups,line_start+1,group_start)
+    #Check if the current sequence of [#?] is long enough for the current group.
+    for c in line[line_start:line_start+cg]:
+        if c == '.':
+            return total
+    #Also reject if there is at least one more group to check, and either the line has already ran out or 
+    # the character after the current group can't be a .
+    if group_start+1 < gl and (next_start >= ll or line[line_start + cg] == '#'):
+        return total
+
+    total += _get_arrangements(line,groups,next_start,group_start+1)
+    #Current line/group layout has not been rejected yet. Continue with the next group, starting where
+    # the current group finished.
     return total
 
 def parse_line(line:str):
@@ -65,10 +87,12 @@ def parse_input(file_path = INPUT_PATH):
 def solution_one(parsed_input:tuple[Record,...]) -> str:
     """ Takes the (parsed) input of the puzzle and uses it to solve for
     the first star of the day. """
-    for r in parsed_input:
-        print(repr(r),';',r.arrangements())
-        
-    return ""
+    total = 0
+    for rec in parsed_input:
+        count = rec.arrangements()
+        total += count
+        print(repr(rec),";",count)
+    return str(total)
 
 def solution_two(parsed_input:tuple) -> str:
     """ Takes the (parsed) input of the puzzle and uses it to solve for
