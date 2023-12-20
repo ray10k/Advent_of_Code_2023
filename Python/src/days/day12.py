@@ -3,7 +3,7 @@ from time import perf_counter_ns
 from typing import NamedTuple
 from functools import cache
 
-INPUT_NAME = "day12_1.txt"
+INPUT_NAME = "day12.txt"
 INPUT_PATH = Path(__file__).parent.parent.parent / "input" / INPUT_NAME
 
 class Record(NamedTuple):
@@ -16,56 +16,64 @@ class Record(NamedTuple):
         numbers = tuple(int(x) for x in line[split_point+1:].split(','))
         return cls(line[0:split_point],numbers)
     
+    def unfold(self) -> "Record":
+        new_line = "?".join(self.line for _ in range(5))
+        new_groups = tuple(i for _ in range(5) for i in self.groups)
+        return self.__class__(new_line,new_groups)
+    
     def __repr__(self) -> str:
         return f"{self.line} -> {' '.join(str(x) for x in self.groups)}"
     
     def arrangements(self) -> int:
-        return _get_arrangements(self.line,self.groups,0,0)
-    
+        return _get_arrangements(self.line,self.groups)
+
 @cache
-def _get_arrangements(line:str,groups:tuple[int,...],line_start:int,group_start:int) -> int:
-    total = 0
-    gl = len(groups)
-    ll = len(line)
-    rc = ll - line_start
+def _get_arrangements(line:str,groups:tuple[int,...]) -> int:
+    """Recursive solver to find the total number of ways a sequence of springs can be arranged.
 
-    #First off, pass-condition; The current group is *past* the last group, and there are no more
-    # #'s in the line.
-    if gl <= group_start:
-        for char in line[line_start:]:
-            if char == '#':
-                return 0
+    Args:
+        line (str): The input, consisting of .#?
+        groups (tuple[int,...]): The numbers of consecutive broken springs.
+
+    Returns:
+        int: The number of possible arrangements.
+    """
+    #Step 1: check if all groups have been matched, and there are no more # in the string.
+    if len(groups) == 0:
+        if any(char == '#' for char in line):
+            return 0
         return 1
-    
-    cg = groups[group_start]
-    next_start = line_start + cg + 1
-    print(f"ls {line_start}; gs {group_start}; {line[line_start:]},{cg}")
-    
-    #Second: There are at least as many characters left in the line as the current group. Reject otherwise.
-    if rc < cg:
+    curr_group = groups[0]
+    #If the line start is past the end of the line, or there are not enough characters left, reject.
+    if len(line) == 0 or len(line) < curr_group:
         return 0
-
-    #print(f" {line[line_start]}; {groups[group_start]}")
-    #Next: if the current character is definitely a ., move on and try with the next.
-    if line[line_start] == '.':
-        return _get_arrangements(line,groups,line_start+1,group_start)
-    #Current character is either a # or a ?.
-    #If the current character is a ?, try treating it as a .
-    if line[line_start] == '?' or (line_start+1 < ll and line[line_start+1] != '.'):
-        total += _get_arrangements(line,groups,line_start+1,group_start)
-    #Check if the current sequence of [#?] is long enough for the current group.
-    for c in line[line_start:line_start+cg]:
-        if c == '.':
-            return total
-    #Also reject if there is at least one more group to check, and either the line has already ran out or 
-    # the character after the current group can't be a .
-    if group_start+1 < gl and (next_start >= ll or line[line_start + cg] == '#'):
+    
+    #step 2: Check what the first character in the line is, and process accordingly.
+    
+    initial = line[0]
+    next_start = curr_group + 1
+    if initial == '.':
+        #Nothing to do here, move along.
+        return _get_arrangements(line[1:],groups)
+    elif initial == '#':
+        #The *whole* group has to fit in. If not, reject.
+        if all(char != '.' for char in line[0:curr_group]):
+            #Either the entire line has to be exhausted, or the character after the current
+            # group has to be anything but a #
+            if curr_group == len(line) or line[curr_group] != '#':
+                return _get_arrangements(line[next_start:],groups[1:])
+        #Otherwise, this can't possibly be a valid arrangement.
+        return 0
+    else: # Must be a ?
+        total = 0
+        #First, run things as if the ? is really a #
+        if all(char != '.' for char in line[:curr_group]):
+            #Same as before. Either we're out of characters, or the next character is a .
+            if curr_group == len(line) or line[curr_group] != '#':
+                total += _get_arrangements(line[next_start:],groups[1:])
+        #Second, run things as if the ? is really a .
+        total += _get_arrangements(line[1:],groups)
         return total
-
-    total += _get_arrangements(line,groups,next_start,group_start+1)
-    #Current line/group layout has not been rejected yet. Continue with the next group, starting where
-    # the current group finished.
-    return total
 
 def parse_line(line:str):
     """ Parse one line of the input into an 'object' for the solution.
@@ -91,13 +99,16 @@ def solution_one(parsed_input:tuple[Record,...]) -> str:
     for rec in parsed_input:
         count = rec.arrangements()
         total += count
-        print(repr(rec),";",count)
+        #print(repr(rec),";",count)
     return str(total)
 
-def solution_two(parsed_input:tuple) -> str:
+def solution_two(parsed_input:tuple[Record,...]) -> str:
     """ Takes the (parsed) input of the puzzle and uses it to solve for
     the second star of the day. """
-    return ""
+    total = 0
+    for rec in parsed_input:
+        total += rec.unfold().arrangements()
+    return str(total)
 
 def solve_day() -> tuple[float,float,float]:
     times = [0,0,0,0]
