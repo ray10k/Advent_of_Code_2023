@@ -1,32 +1,81 @@
 from pathlib import Path
 from time import perf_counter_ns
+from typing import NamedTuple
 
 INPUT_NAME = "day13.txt"
 INPUT_PATH = Path(__file__).parent.parent.parent / "input" / INPUT_NAME
 
-def parse_line(line:str):
-    """ Parse one line of the input into an 'object' for the solution.
-    If a line should be discarded, return None instead. """
-    line = line.strip()
-    if line == "":
-        return None
-    return line
+class RockMap(NamedTuple):
+    lines:tuple[str,...]
+    width:int
+    height:int
+    
+    @classmethod
+    def from_lines(cls,lines:list[str]):
+        width = max(len(line) for line in lines)
+        height = len(lines)
+        return cls(tuple(lines),width,height)
+    
+    def __repr__(self) -> str:
+        return f"Map of {self.width} by {self.height}"
+    
+    def get_rows(self) -> tuple[int,...]:
+        rows = []
+        for line in self.lines:
+            temp = 0
+            for pos,char in enumerate(line):
+                temp += 1<<pos if char == '#' else 0
+            rows.append(temp)
+        return tuple(rows)
+    
+    def get_columns(self) -> tuple[int,...]:
+        columns = []
+        for column in range(self.width):
+            temp = 0
+            for pos,line in enumerate(self.lines):
+                temp += 1<<pos if line[column] == '#' else 0
+            columns.append(temp)
+        return tuple(columns)
 
 def parse_input(file_path = INPUT_PATH):
     """ Loads the given file, and parses it line-by-line. Should return
     some useful representation of the input. """
-    parsed_input = None
+    parsed_input = []
+    temp_lines = []
+            
     if file_path.exists():
         with open(file_path) as input_file:
-            parsed_input = tuple(parse_line(line) for line in input_file)
-    return tuple(x for x in parsed_input if x is not None)
+            for line in input_file:
+                line = line.strip()
+                if line:
+                    temp_lines.append(line)
+                else:
+                    parsed_input.append(RockMap.from_lines(temp_lines))
+                    temp_lines.clear()
+    if temp_lines:
+        parsed_input.append(RockMap.from_lines(temp_lines))
+    return tuple(parsed_input)
 
-def solution_one(parsed_input:tuple) -> str:
+def solution_one(parsed_input:tuple[RockMap,...]) -> str:
     """ Takes the (parsed) input of the puzzle and uses it to solve for
     the first star of the day. """
+    retval = 0
+    for mp in parsed_input:
+        #print(f"{mp!r}; {mp.get_columns()}; {mp.get_rows()}")
+        rows = mp.get_rows()
+        for index,(l,r) in enumerate(zip(rows,rows[1:]),start=1):
+            if l == r:
+                print(f"rows {index} and {index+1} ",end="")
+                break
+        columns = mp.get_columns()
+        for index,(u,d) in enumerate(zip(columns,columns[1:]),start=1):
+            if u == d:
+                print(f"columns {index} and {index+1}", end="")
+                break
+        print()
     return ""
 
-def solution_two(parsed_input:tuple) -> str:
+def solution_two(parsed_input:tuple[RockMap,...]) -> str:
     """ Takes the (parsed) input of the puzzle and uses it to solve for
     the second star of the day. """
     return ""
