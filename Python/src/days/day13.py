@@ -56,6 +56,13 @@ def parse_input(file_path = INPUT_PATH):
         parsed_input.append(RockMap.from_lines(temp_lines))
     return tuple(parsed_input)
 
+def is_mirror_section(segment:tuple[int,...])->bool:
+    #print(f"Testing {segment}")
+    if len(segment) % 2 != 0 or len(segment) == 0:
+        return False
+    midpoint = int(len(segment) / 2)
+    return all(l==r for l,r in zip(segment[:midpoint],segment[:midpoint-1:-1]))
+
 def solution_one(parsed_input:tuple[RockMap,...]) -> str:
     """ Takes the (parsed) input of the puzzle and uses it to solve for
     the first star of the day. """
@@ -63,17 +70,29 @@ def solution_one(parsed_input:tuple[RockMap,...]) -> str:
     for mp in parsed_input:
         #print(f"{mp!r}; {mp.get_columns()}; {mp.get_rows()}")
         rows = mp.get_rows()
-        for index,(l,r) in enumerate(zip(rows,rows[1:]),start=1):
-            if l == r:
-                print(f"rows {index} and {index+1} ",end="")
+        #Check rows against the bottom row.
+        for h in range(0,len(rows)):
+            if is_mirror_section(rows[h:]):
+                up_rows = h + ((len(rows) - h) / 2)
+                retval += int(100*up_rows)
                 break
-        columns = mp.get_columns()
-        for index,(u,d) in enumerate(zip(columns,columns[1:]),start=1):
-            if u == d:
-                print(f"columns {index} and {index+1}", end="")
+            elif is_mirror_section(rows[:h]):
+                up_rows = h/2
+                retval += int(100*up_rows)
                 break
-        print()
-    return ""
+        else:
+            columns = mp.get_columns()
+            for v in range(0,len(columns)):
+                if is_mirror_section(columns[v:]):
+                    left_cols = v + ((len(columns) - v) / 2)
+                    retval += int(left_cols)
+                    break
+                elif is_mirror_section(columns[:v]):
+                    left_cols = v/2
+                    retval += int(left_cols)
+                    break
+
+    return str(retval)
 
 def solution_two(parsed_input:tuple[RockMap,...]) -> str:
     """ Takes the (parsed) input of the puzzle and uses it to solve for
